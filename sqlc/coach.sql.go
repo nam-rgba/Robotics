@@ -11,13 +11,12 @@ import (
 )
 
 const createCoach = `-- name: CreateCoach :one
-INSERT INTO coach (coach_id, fullname, email, country, title, company)
-VALUES ($1, $2, $3, $4, $5, $6)
-RETURNING coach_id, fullname, email, country, title, company
+INSERT INTO coach ( fullname, email, country, title, company)
+VALUES ($1, $2, $3, $4, $5)
+RETURNING coach_id, fullname, email, country, title, company, numberofcandidate
 `
 
 type CreateCoachParams struct {
-	CoachID  int64          `json:"coach_id"`
 	Fullname sql.NullString `json:"fullname"`
 	Email    sql.NullString `json:"email"`
 	Country  sql.NullString `json:"country"`
@@ -27,7 +26,6 @@ type CreateCoachParams struct {
 
 func (q *Queries) CreateCoach(ctx context.Context, arg CreateCoachParams) (Coach, error) {
 	row := q.db.QueryRowContext(ctx, createCoach,
-		arg.CoachID,
 		arg.Fullname,
 		arg.Email,
 		arg.Country,
@@ -42,6 +40,7 @@ func (q *Queries) CreateCoach(ctx context.Context, arg CreateCoachParams) (Coach
 		&i.Country,
 		&i.Title,
 		&i.Company,
+		&i.Numberofcandidate,
 	)
 	return i, err
 }
@@ -50,7 +49,7 @@ const editCoach = `-- name: EditCoach :one
 UPDATE coach
 SET fullname = $2
 WHERE coach_id = $1
-RETURNING coach_id, fullname, email, country, title, company
+RETURNING coach_id, fullname, email, country, title, company, numberofcandidate
 `
 
 type EditCoachParams struct {
@@ -68,12 +67,13 @@ func (q *Queries) EditCoach(ctx context.Context, arg EditCoachParams) (Coach, er
 		&i.Country,
 		&i.Title,
 		&i.Company,
+		&i.Numberofcandidate,
 	)
 	return i, err
 }
 
 const getCoach = `-- name: GetCoach :one
-SELECT coach_id, fullname, email, country, title, company FROM coach
+SELECT coach_id, fullname, email, country, title, company, numberofcandidate FROM coach
 WHERE coach_id = $1 LIMIT 1
 `
 
@@ -87,6 +87,7 @@ func (q *Queries) GetCoach(ctx context.Context, coachID int64) (Coach, error) {
 		&i.Country,
 		&i.Title,
 		&i.Company,
+		&i.Numberofcandidate,
 	)
 	return i, err
 }

@@ -11,13 +11,13 @@ import (
 	"time"
 )
 
-const createCandicate = `-- name: CreateCandicate :one
-INSERT INTO candicate (fullname, title, email, country, company, dateofbirth)
+const createCandidate = `-- name: CreateCandidate :one
+INSERT INTO candidate (fullname, title, email, country, company, dateofbirth)
 VALUES($1, $2, $3, $4, $5, $6)
 RETURNING can_id, fullname, title, email, country, ranklocal, rankworld, company, dateofbirth, coach_id
 `
 
-type CreateCandicateParams struct {
+type CreateCandidateParams struct {
 	Fullname    sql.NullString `json:"fullname"`
 	Title       sql.NullString `json:"title"`
 	Email       sql.NullString `json:"email"`
@@ -26,8 +26,8 @@ type CreateCandicateParams struct {
 	Dateofbirth time.Time      `json:"dateofbirth"`
 }
 
-func (q *Queries) CreateCandicate(ctx context.Context, arg CreateCandicateParams) (Candicate, error) {
-	row := q.db.QueryRowContext(ctx, createCandicate,
+func (q *Queries) CreateCandidate(ctx context.Context, arg CreateCandidateParams) (Candidate, error) {
+	row := q.db.QueryRowContext(ctx, createCandidate,
 		arg.Fullname,
 		arg.Title,
 		arg.Email,
@@ -35,7 +35,7 @@ func (q *Queries) CreateCandicate(ctx context.Context, arg CreateCandicateParams
 		arg.Company,
 		arg.Dateofbirth,
 	)
-	var i Candicate
+	var i Candidate
 	err := row.Scan(
 		&i.CanID,
 		&i.Fullname,
@@ -51,14 +51,14 @@ func (q *Queries) CreateCandicate(ctx context.Context, arg CreateCandicateParams
 	return i, err
 }
 
-const getCandicate = `-- name: GetCandicate :one
-SELECT can_id, fullname, title, email, country, ranklocal, rankworld, company, dateofbirth, coach_id FROM candicate
+const getCandidate = `-- name: GetCandidate :one
+SELECT can_id, fullname, title, email, country, ranklocal, rankworld, company, dateofbirth, coach_id FROM candidate
 WHERE can_id = $1 LIMIT 1
 `
 
-func (q *Queries) GetCandicate(ctx context.Context, canID int64) (Candicate, error) {
-	row := q.db.QueryRowContext(ctx, getCandicate, canID)
-	var i Candicate
+func (q *Queries) GetCandidate(ctx context.Context, canID int64) (Candidate, error) {
+	row := q.db.QueryRowContext(ctx, getCandidate, canID)
+	var i Candidate
 	err := row.Scan(
 		&i.CanID,
 		&i.Fullname,
@@ -74,21 +74,21 @@ func (q *Queries) GetCandicate(ctx context.Context, canID int64) (Candicate, err
 	return i, err
 }
 
-const listCandicates = `-- name: ListCandicates :many
-SELECT can_id, fullname, title, email, country, ranklocal, rankworld, company, dateofbirth, coach_id FROM candicate
+const listCandidates = `-- name: ListCandidates :many
+SELECT can_id, fullname, title, email, country, ranklocal, rankworld, company, dateofbirth, coach_id FROM candidate
 ORDER BY ranklocal
 LIMIT $1
 `
 
-func (q *Queries) ListCandicates(ctx context.Context, limit int32) ([]Candicate, error) {
-	rows, err := q.db.QueryContext(ctx, listCandicates, limit)
+func (q *Queries) ListCandidates(ctx context.Context, limit int32) ([]Candidate, error) {
+	rows, err := q.db.QueryContext(ctx, listCandidates, limit)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []Candicate
+	var items []Candidate
 	for rows.Next() {
-		var i Candicate
+		var i Candidate
 		if err := rows.Scan(
 			&i.CanID,
 			&i.Fullname,
@@ -114,13 +114,29 @@ func (q *Queries) ListCandicates(ctx context.Context, limit int32) ([]Candicate,
 	return items, nil
 }
 
-const updateCandicate = `-- name: UpdateCandicate :exec
-UPDATE candicate
+const signCoach = `-- name: SignCoach :exec
+UPDATE candidate
+SET coach_id = $1
+WHERE can_id = $2
+`
+
+type SignCoachParams struct {
+	CoachID sql.NullInt64 `json:"coach_id"`
+	CanID   int64         `json:"can_id"`
+}
+
+func (q *Queries) SignCoach(ctx context.Context, arg SignCoachParams) error {
+	_, err := q.db.ExecContext(ctx, signCoach, arg.CoachID, arg.CanID)
+	return err
+}
+
+const updateCandidate = `-- name: UpdateCandidate :exec
+UPDATE candidate
 SET fullname = $1, title = $2, email = $3, country = $4, company = $5, dateofbirth = $6
 WHERE can_id = $7
 `
 
-type UpdateCandicateParams struct {
+type UpdateCandidateParams struct {
 	Fullname    sql.NullString `json:"fullname"`
 	Title       sql.NullString `json:"title"`
 	Email       sql.NullString `json:"email"`
@@ -130,8 +146,8 @@ type UpdateCandicateParams struct {
 	CanID       int64          `json:"can_id"`
 }
 
-func (q *Queries) UpdateCandicate(ctx context.Context, arg UpdateCandicateParams) error {
-	_, err := q.db.ExecContext(ctx, updateCandicate,
+func (q *Queries) UpdateCandidate(ctx context.Context, arg UpdateCandidateParams) error {
+	_, err := q.db.ExecContext(ctx, updateCandidate,
 		arg.Fullname,
 		arg.Title,
 		arg.Email,
@@ -140,21 +156,5 @@ func (q *Queries) UpdateCandicate(ctx context.Context, arg UpdateCandicateParams
 		arg.Dateofbirth,
 		arg.CanID,
 	)
-	return err
-}
-
-const signCoach = `-- name: signCoach :exec
-UPDATE candicate
-SET coach_id = $1
-WHERE can_id = $2
-`
-
-type signCoachParams struct {
-	CoachID sql.NullInt32 `json:"coach_id"`
-	CanID   int64         `json:"can_id"`
-}
-
-func (q *Queries) signCoach(ctx context.Context, arg signCoachParams) error {
-	_, err := q.db.ExecContext(ctx, signCoach, arg.CoachID, arg.CanID)
 	return err
 }

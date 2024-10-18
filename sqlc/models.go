@@ -9,7 +9,7 @@ import (
 	"time"
 )
 
-type Candicate struct {
+type Candidate struct {
 	CanID       int64          `json:"can_id"`
 	Fullname    sql.NullString `json:"fullname"`
 	Title       sql.NullString `json:"title"`
@@ -19,7 +19,7 @@ type Candicate struct {
 	Rankworld   sql.NullInt32  `json:"rankworld"`
 	Company     sql.NullString `json:"company"`
 	Dateofbirth time.Time      `json:"dateofbirth"`
-	CoachID     sql.NullInt32  `json:"coach_id"`
+	CoachID     sql.NullInt64  `json:"coach_id"`
 }
 
 type Challenge struct {
@@ -32,29 +32,57 @@ type Challenge struct {
 }
 
 type Coach struct {
-	CoachID  int64          `json:"coach_id"`
-	Fullname sql.NullString `json:"fullname"`
-	Email    sql.NullString `json:"email"`
-	Country  sql.NullString `json:"country"`
-	Title    sql.NullString `json:"title"`
-	Company  sql.NullString `json:"company"`
+	CoachID           int64          `json:"coach_id"`
+	Fullname          sql.NullString `json:"fullname"`
+	Email             sql.NullString `json:"email"`
+	Country           sql.NullString `json:"country"`
+	Title             sql.NullString `json:"title"`
+	Company           sql.NullString `json:"company"`
+	Numberofcandidate sql.NullInt32  `json:"numberofcandidate"`
 }
 
 type Competition struct {
-	ComID      int64          `json:"com_id"`
-	Name       sql.NullString `json:"name"`
-	Stime      time.Time      `json:"stime"`
-	Etime      time.Time      `json:"etime"`
-	Decription sql.NullString `json:"decription"`
-	Rules      sql.NullString `json:"rules"`
-	Agelimit   sql.NullInt32  `json:"agelimit"`
-	Prizevalue sql.NullString `json:"prizevalue"`
+	ComID          int64          `json:"com_id"`
+	Name           sql.NullString `json:"name"`
+	Decription     sql.NullString `json:"decription"`
+	Rules          sql.NullString `json:"rules"`
+	Agelimit       sql.NullInt32  `json:"agelimit"`
+	Images         []string       `json:"images"`
+	Status         sql.NullString `json:"status"`
+	Stime          time.Time      `json:"stime"`
+	Etime          time.Time      `json:"etime"`
+	Registerstart  time.Time      `json:"registerstart"`
+	Registerend    time.Time      `json:"registerend"`
+	Location       sql.NullString `json:"location"`
+	Venue          sql.NullString `json:"venue"`
+	Address        sql.NullString `json:"address"`
+	City           sql.NullString `json:"city"`
+	MaxTeamSize    sql.NullInt32  `json:"max_team_size"`
+	ParticipantFee sql.NullInt32  `json:"participant_fee"`
+	FirstPrize     sql.NullInt32  `json:"first_prize"`
+	SecondPrize    sql.NullInt32  `json:"second_prize"`
+	ThirdPrize     sql.NullInt32  `json:"third_prize"`
+	OrgID          sql.NullInt64  `json:"org_id"`
+}
+
+type Organization struct {
+	OrgID       int64          `json:"org_id"`
+	Name        sql.NullString `json:"name"`
+	Logo        sql.NullString `json:"logo"`
+	Description sql.NullString `json:"description"`
 }
 
 type Team struct {
 	TeamID       int64          `json:"team_id"`
-	CoachID      sql.NullInt32  `json:"coach_id"`
-	MemberID     sql.NullInt32  `json:"member_id"`
+	CoachID      sql.NullInt64  `json:"coach_id"`
+	JoinCode     sql.NullString `json:"join_code"`
 	Teamname     sql.NullString `json:"teamname"`
 	CompetitonID sql.NullInt32  `json:"competiton_id"`
+	Maxteam      sql.NullInt32  `json:"maxteam"`
+}
+
+type TeamCandidate struct {
+	TeamID           int64          `json:"team_id"`
+	CanID            int64          `json:"can_id"`
+	InvitationStatus sql.NullString `json:"invitation_status"`
 }
