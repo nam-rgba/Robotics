@@ -1,0 +1,5 @@
+ALTER TABLE "candidate"
+ALTER COLUMN "password" DROP NOT NULL;
+
+ALTER TABLE "coach"
+ALTER COLUMN "password" DROP NOT NULL;

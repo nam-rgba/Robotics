@@ -1,0 +1,5 @@
+ALTER TABLE "candidate"
+ADD COLUMN "password" VARCHAR(255) NOT NULL;
+
+ALTER TABLE "coach"
+ADD COLUMN "password" VARCHAR(255) NOT NULL;

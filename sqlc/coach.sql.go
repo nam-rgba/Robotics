@@ -10,46 +10,11 @@ import (
 	"database/sql"
 )
 
-const createCoach = `-- name: CreateCoach :one
-INSERT INTO coach ( fullname, email, country, title, company)
-VALUES ($1, $2, $3, $4, $5)
-RETURNING coach_id, fullname, email, country, title, company, numberofcandidate
-`
-
-type CreateCoachParams struct {
-	Fullname sql.NullString `json:"fullname"`
-	Email    sql.NullString `json:"email"`
-	Country  sql.NullString `json:"country"`
-	Title    sql.NullString `json:"title"`
-	Company  sql.NullString `json:"company"`
-}
-
-func (q *Queries) CreateCoach(ctx context.Context, arg CreateCoachParams) (Coach, error) {
-	row := q.db.QueryRowContext(ctx, createCoach,
-		arg.Fullname,
-		arg.Email,
-		arg.Country,
-		arg.Title,
-		arg.Company,
-	)
-	var i Coach
-	err := row.Scan(
-		&i.CoachID,
-		&i.Fullname,
-		&i.Email,
-		&i.Country,
-		&i.Title,
-		&i.Company,
-		&i.Numberofcandidate,
-	)
-	return i, err
-}
-
 const editCoach = `-- name: EditCoach :one
 UPDATE coach
 SET fullname = $2
 WHERE coach_id = $1
-RETURNING coach_id, fullname, email, country, title, company, numberofcandidate
+RETURNING coach_id, fullname, email, country, title, company, numberofcandidate, password
 `
 
 type EditCoachParams struct {
@@ -68,12 +33,13 @@ func (q *Queries) EditCoach(ctx context.Context, arg EditCoachParams) (Coach, er
 		&i.Title,
 		&i.Company,
 		&i.Numberofcandidate,
+		&i.Password,
 	)
 	return i, err
 }
 
 const getCoach = `-- name: GetCoach :one
-SELECT coach_id, fullname, email, country, title, company, numberofcandidate FROM coach
+SELECT coach_id, fullname, email, country, title, company, numberofcandidate, password FROM coach
 WHERE coach_id = $1 LIMIT 1
 `
 
@@ -88,6 +54,54 @@ func (q *Queries) GetCoach(ctx context.Context, coachID int64) (Coach, error) {
 		&i.Title,
 		&i.Company,
 		&i.Numberofcandidate,
+		&i.Password,
+	)
+	return i, err
+}
+
+const getCoachByEmail = `-- name: GetCoachByEmail :one
+SELECT coach_id, fullname, email, country, title, company, numberofcandidate, password FROM coach
+WHERE email = $1 LIMIT 1
+`
+
+func (q *Queries) GetCoachByEmail(ctx context.Context, email sql.NullString) (Coach, error) {
+	row := q.db.QueryRowContext(ctx, getCoachByEmail, email)
+	var i Coach
+	err := row.Scan(
+		&i.CoachID,
+		&i.Fullname,
+		&i.Email,
+		&i.Country,
+		&i.Title,
+		&i.Company,
+		&i.Numberofcandidate,
+		&i.Password,
+	)
+	return i, err
+}
+
+const registerCoach = `-- name: RegisterCoach :one
+INSERT INTO coach
+(email, password) VALUES ($1, $2) RETURNING coach_id, fullname, email, country, title, company, numberofcandidate, password
+`
+
+type RegisterCoachParams struct {
+	Email    sql.NullString `json:"email"`
+	Password string         `json:"password"`
+}
+
+func (q *Queries) RegisterCoach(ctx context.Context, arg RegisterCoachParams) (Coach, error) {
+	row := q.db.QueryRowContext(ctx, registerCoach, arg.Email, arg.Password)
+	var i Coach
+	err := row.Scan(
+		&i.CoachID,
+		&i.Fullname,
+		&i.Email,
+		&i.Country,
+		&i.Title,
+		&i.Company,
+		&i.Numberofcandidate,
+		&i.Password,
 	)
 	return i, err
 }

@@ -20,6 +20,7 @@ type Candidate struct {
 	Company     sql.NullString `json:"company"`
 	Dateofbirth time.Time      `json:"dateofbirth"`
 	CoachID     sql.NullInt64  `json:"coach_id"`
+	Password    string         `json:"password"`
 }
 
 type Challenge struct {
@@ -39,6 +40,7 @@ type Coach struct {
 	Title             sql.NullString `json:"title"`
 	Company           sql.NullString `json:"company"`
 	Numberofcandidate sql.NullInt32  `json:"numberofcandidate"`
+	Password          string         `json:"password"`
 }
 
 type Competition struct {

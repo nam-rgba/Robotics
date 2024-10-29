@@ -11,48 +11,18 @@ import (
 	"time"
 )
 
-const createCandidate = `-- name: CreateCandidate :one
-INSERT INTO candidate (fullname, title, email, country, company, dateofbirth)
-VALUES($1, $2, $3, $4, $5, $6)
-RETURNING can_id, fullname, title, email, country, ranklocal, rankworld, company, dateofbirth, coach_id
+const deleteCandidate = `-- name: DeleteCandidate :exec
+DELETE FROM candidate
+WHERE can_id = $1
 `
 
-type CreateCandidateParams struct {
-	Fullname    sql.NullString `json:"fullname"`
-	Title       sql.NullString `json:"title"`
-	Email       sql.NullString `json:"email"`
-	Country     sql.NullString `json:"country"`
-	Company     sql.NullString `json:"company"`
-	Dateofbirth time.Time      `json:"dateofbirth"`
-}
-
-func (q *Queries) CreateCandidate(ctx context.Context, arg CreateCandidateParams) (Candidate, error) {
-	row := q.db.QueryRowContext(ctx, createCandidate,
-		arg.Fullname,
-		arg.Title,
-		arg.Email,
-		arg.Country,
-		arg.Company,
-		arg.Dateofbirth,
-	)
-	var i Candidate
-	err := row.Scan(
-		&i.CanID,
-		&i.Fullname,
-		&i.Title,
-		&i.Email,
-		&i.Country,
-		&i.Ranklocal,
-		&i.Rankworld,
-		&i.Company,
-		&i.Dateofbirth,
-		&i.CoachID,
-	)
-	return i, err
+func (q *Queries) DeleteCandidate(ctx context.Context, canID int64) error {
+	_, err := q.db.ExecContext(ctx, deleteCandidate, canID)
+	return err
 }
 
 const getCandidate = `-- name: GetCandidate :one
-SELECT can_id, fullname, title, email, country, ranklocal, rankworld, company, dateofbirth, coach_id FROM candidate
+SELECT can_id, fullname, title, email, country, ranklocal, rankworld, company, dateofbirth, coach_id, password FROM candidate
 WHERE can_id = $1 LIMIT 1
 `
 
@@ -70,12 +40,37 @@ func (q *Queries) GetCandidate(ctx context.Context, canID int64) (Candidate, err
 		&i.Company,
 		&i.Dateofbirth,
 		&i.CoachID,
+		&i.Password,
+	)
+	return i, err
+}
+
+const getCandidateByEmail = `-- name: GetCandidateByEmail :one
+SELECT can_id, fullname, title, email, country, ranklocal, rankworld, company, dateofbirth, coach_id, password FROM candidate
+WHERE email = $1 LIMIT 1
+`
+
+func (q *Queries) GetCandidateByEmail(ctx context.Context, email sql.NullString) (Candidate, error) {
+	row := q.db.QueryRowContext(ctx, getCandidateByEmail, email)
+	var i Candidate
+	err := row.Scan(
+		&i.CanID,
+		&i.Fullname,
+		&i.Title,
+		&i.Email,
+		&i.Country,
+		&i.Ranklocal,
+		&i.Rankworld,
+		&i.Company,
+		&i.Dateofbirth,
+		&i.CoachID,
+		&i.Password,
 	)
 	return i, err
 }
 
 const listCandidates = `-- name: ListCandidates :many
-SELECT can_id, fullname, title, email, country, ranklocal, rankworld, company, dateofbirth, coach_id FROM candidate
+SELECT can_id, fullname, title, email, country, ranklocal, rankworld, company, dateofbirth, coach_id, password FROM candidate
 ORDER BY ranklocal
 LIMIT $1
 `
@@ -100,6 +95,7 @@ func (q *Queries) ListCandidates(ctx context.Context, limit int32) ([]Candidate,
 			&i.Company,
 			&i.Dateofbirth,
 			&i.CoachID,
+			&i.Password,
 		); err != nil {
 			return nil, err
 		}
@@ -112,6 +108,35 @@ func (q *Queries) ListCandidates(ctx context.Context, limit int32) ([]Candidate,
 		return nil, err
 	}
 	return items, nil
+}
+
+const registerCandidate = `-- name: RegisterCandidate :one
+INSERT INTO candidate
+(email, password) VALUES ($1, $2) RETURNING can_id, fullname, title, email, country, ranklocal, rankworld, company, dateofbirth, coach_id, password
+`
+
+type RegisterCandidateParams struct {
+	Email    sql.NullString `json:"email"`
+	Password string         `json:"password"`
+}
+
+func (q *Queries) RegisterCandidate(ctx context.Context, arg RegisterCandidateParams) (Candidate, error) {
+	row := q.db.QueryRowContext(ctx, registerCandidate, arg.Email, arg.Password)
+	var i Candidate
+	err := row.Scan(
+		&i.CanID,
+		&i.Fullname,
+		&i.Title,
+		&i.Email,
+		&i.Country,
+		&i.Ranklocal,
+		&i.Rankworld,
+		&i.Company,
+		&i.Dateofbirth,
+		&i.CoachID,
+		&i.Password,
+	)
+	return i, err
 }
 
 const signCoach = `-- name: SignCoach :exec
@@ -132,14 +157,13 @@ func (q *Queries) SignCoach(ctx context.Context, arg SignCoachParams) error {
 
 const updateCandidate = `-- name: UpdateCandidate :exec
 UPDATE candidate
-SET fullname = $1, title = $2, email = $3, country = $4, company = $5, dateofbirth = $6
-WHERE can_id = $7
+SET fullname = $1, title = $2, country = $3, company = $4, dateofbirth = $5
+WHERE can_id = $6
 `
 
 type UpdateCandidateParams struct {
 	Fullname    sql.NullString `json:"fullname"`
 	Title       sql.NullString `json:"title"`
-	Email       sql.NullString `json:"email"`
 	Country     sql.NullString `json:"country"`
 	Company     sql.NullString `json:"company"`
 	Dateofbirth time.Time      `json:"dateofbirth"`
@@ -150,7 +174,6 @@ func (q *Queries) UpdateCandidate(ctx context.Context, arg UpdateCandidateParams
 	_, err := q.db.ExecContext(ctx, updateCandidate,
 		arg.Fullname,
 		arg.Title,
-		arg.Email,
 		arg.Country,
 		arg.Company,
 		arg.Dateofbirth,

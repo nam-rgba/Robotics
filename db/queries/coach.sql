@@ -1,7 +1,3 @@
--- name: CreateCoach :one
-INSERT INTO coach ( fullname, email, country, title, company)
-VALUES ($1, $2, $3, $4, $5)
-RETURNING *;
 
 -- name: GetCoach :one
 SELECT * FROM coach
@@ -13,4 +9,11 @@ SET fullname = $2
 WHERE coach_id = $1
 RETURNING *;
 
+-- name: RegisterCoach :one
+INSERT INTO coach
+(email, password) VALUES ($1, $2) RETURNING *;
+
+-- name: GetCoachByEmail :one
+SELECT * FROM coach
+WHERE email = $1 LIMIT 1;
 

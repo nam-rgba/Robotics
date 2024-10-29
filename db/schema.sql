@@ -5,7 +5,8 @@ CREATE TABLE "coach" (
   "country" VARCHAR,
   "title" varchar,
   "company" VARCHAR,
-  "numberofcandidate" int
+  "numberofcandidate" int,
+  "password" VARCHAR(255) NOT NULL
 );
 
 CREATE TABLE "candidate" (
@@ -18,7 +19,8 @@ CREATE TABLE "candidate" (
   "rankworld" int,
   "company" VARCHAR,
   "dateofbirth" TIMESTAMPTZ NOT NULL DEFAULT (now()),
-  "coach_id" bigserial REFERENCES coach(coach_id) ON DELETE CASCADE
+  "coach_id" bigserial REFERENCES coach(coach_id) ON DELETE CASCADE,
+   "password" VARCHAR(255) NOT NULL
 );
 
 CREATE TABLE "organization" (
