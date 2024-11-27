@@ -2,8 +2,8 @@ package api
 
 import (
 	"database/sql"
+	"fmt"
 	"net/http"
-	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/nam-rgba/blv/auth"
@@ -17,6 +17,7 @@ type CreateUserRequest struct {
 }
 
 type LoginUserRequest struct {
+	Role     string `json:"role" binding:"required"`
 	Email    string `json:"email" binding:"required"`
 	Password string `json:"password" binding:"required"`
 }
@@ -66,7 +67,7 @@ func (s *Server) Signup(ctx *gin.Context) {
 }
 
 // Login authenticates a user
-func (s *Server) LoginCandidate(c *gin.Context) {
+func (s *Server) Login(c *gin.Context) {
 	var req LoginUserRequest
 
 	// Check is request is valid
@@ -74,64 +75,79 @@ func (s *Server) LoginCandidate(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
+	// check role
+	if req.Role == "candidate" {
+		candidate, err := s.store.GetCandidateByEmail(c, sql.NullString{String: req.Email, Valid: true})
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			return
+		}
+		// Check hash password error
+		errHash := auth.ComparePassword(candidate.Password, req.Password)
+		if errHash != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": errHash.Error()})
+			return
+		}
 
-	candidate, err := s.store.GetCandidateByEmail(c, sql.NullString{String: req.Email, Valid: true})
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		// Generate token
+		token, err := auth.GenerateToken(
+			candidate.Email.String,
+		)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			return
+		}
+
+		c.SetCookie("token", token, 3600, "/", "localhost", false, true)
+		c.JSON(200, gin.H{
+			"token":     token,
+			"role":      "candidate",
+			"user_id":   candidate.CanID,
+			"user_mail": candidate.Email.String,
+			"success":   "user logged in",
+		})
+		return
+
+	} else if req.Role == "coach" {
+		coach, err := s.store.GetCoachByEmail(c, sql.NullString{String: req.Email, Valid: true})
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			return
+		}
+
+		// Check hash password error
+		errHash := auth.ComparePassword(coach.Password, req.Password)
+		if errHash != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": errHash.Error()})
+			return
+		}
+
+		// Generate token
+		token, err := auth.GenerateToken(
+			coach.Email.String,
+		)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			return
+		}
+
+		c.SetCookie("token", token, 3600, "/", "localhost", false, true)
+		response := gin.H{
+			"token":     token,
+			"role":      "coach",
+			"user_id":   coach.CoachID,
+			"user_mail": coach.Email.String,
+			"success":   "user logged in",
+		}
+		fmt.Println(response)
+		c.JSON(200, gin.H{
+			"token":     token,
+			"role":      "coach",
+			"user_id":   coach.CoachID,
+			"user_mail": coach.Email.String,
+			"success":   "user logged in",
+		})
 		return
 	}
 
-	// Check hash password error
-	errHash := auth.ComparePassword(candidate.Password, req.Password)
-	if errHash != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": errHash.Error()})
-		return
-	}
-
-	// Generate token
-	token, err := auth.GenerateToken(
-		candidate.Email.String,
-	)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-		return
-	}
-
-	c.SetCookie("token", token, int(time.Hour.Seconds()), "/", "localhost", false, true)
-	c.JSON(200, gin.H{"success": "user logged in"})
-}
-
-func (s *Server) LoginCoach(c *gin.Context) {
-	var req LoginUserRequest
-
-	// Check is request is valid
-	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-		return
-	}
-
-	candidate, err := s.store.GetCoachByEmail(c, sql.NullString{String: req.Email, Valid: true})
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error1": err.Error()})
-		return
-	}
-
-	// Check hash password error
-	errHash := auth.ComparePassword(candidate.Password, req.Password)
-	if errHash != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": errHash.Error()})
-		return
-	}
-
-	// Generate token
-	token, err := auth.GenerateToken(
-		candidate.Email.String,
-	)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-		return
-	}
-
-	c.SetCookie("token", token, int(time.Hour.Seconds()), "/", "localhost", false, true)
-	c.JSON(200, gin.H{"success": "user logged in"})
 }

@@ -26,6 +26,7 @@ func main() {
 	server := api.NewServer(store)
 
 	err = server.Start(serverAddress)
+
 	if err != nil {
 		log.Fatal("cannot start server:", err)
 	}

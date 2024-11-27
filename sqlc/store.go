@@ -3,13 +3,9 @@ package sqlc
 import (
 	"context"
 	"database/sql"
+	"errors"
 )
 
-type AcceptCandidateTxParams struct {
-	CoachID     int64 `json:"coach_id"`
-	CandidateID int64 `json:"can_id"`
-	TeamID      int64 `json:"team_id"`
-}
 type Store struct {
 	*Queries
 	db *sql.DB
@@ -38,27 +34,56 @@ func (store *Store) execTX(ctx context.Context, fn func(*Queries) error) error {
 	return tx.Commit()
 }
 
-type AcceptCandidateResult struct {
+// Func to invite candidate to join team
+// 1. Check if candidate is already in a team
+// 2. Check slot of team
+// 3. Add candidate to team, set status to pending
+// 4. Set candidate is in team
+type InviteCandidateTxParams struct {
+	CoachID     int64 `json:"coach_id"`
+	CandidateID int64 `json:"can_id"`
+	TeamID      int64 `json:"team_id"`
+}
+
+type InviteCandidateResult struct {
 	TeamCandidate TeamCandidate `json:"team_candidate"`
 }
 
-func (store *Store) AcceptCandidate(ctx context.Context, arg AcceptCandidateTxParams) (AcceptCandidateResult, error) {
-	var result AcceptCandidateResult
+func (store *Store) InviteCandidate(ctx context.Context, arg InviteCandidateTxParams) (InviteCandidateResult, error) {
+	var result InviteCandidateResult
 	err := store.execTX(ctx, func(q *Queries) error {
 		var err error
-		// 1. Set candidate's team status
-		result.TeamCandidate, err = q.AcceptCandidate(ctx, AcceptCandidateParams{
-			TeamID: arg.TeamID,
-			CanID:  arg.CandidateID,
+		//  Check if candidate is already in a team
+		isInTeam, err := q.GetInTeam(ctx, arg.CandidateID)
+		if err != nil {
+			return err
+		}
+		if isInTeam.Bool {
+			return errors.New("candidate is already in a team")
+		}
+
+		// Check slot of team
+		teamSlot, err := q.GetNumberOfCandidates(ctx, arg.TeamID)
+		if err != nil {
+			return err
+		}
+		if teamSlot >= 5 {
+			return errors.New("team is full")
+		}
+
+		// Add candidate to team, set status to pending
+		result.TeamCandidate, err = q.InviteByEmail(ctx, InviteByEmailParams{
+			arg.TeamID,
+			arg.CandidateID,
 		})
 		if err != nil {
 			return err
 		}
 
-		// 2. Set candidate's coach_id
-		err = q.SignCoach(ctx, SignCoachParams{
-			CanID:   arg.CandidateID,
-			CoachID: sql.NullInt64{Int64: arg.CoachID, Valid: true},
+		// Set candidate is in team
+		err = q.SetInTeam(ctx, SetInTeamParams{
+			sql.NullBool{Bool: true, Valid: true},
+			arg.CandidateID,
 		})
 		if err != nil {
 			return err
@@ -68,4 +93,25 @@ func (store *Store) AcceptCandidate(ctx context.Context, arg AcceptCandidateTxPa
 	})
 
 	return result, err
+}
+
+// Func to response invitation, just set status
+type ResponseInvitationTxParams struct {
+	CandidateID int64  `json:"can_id"`
+	TeamID      int64  `json:"team_id"`
+	Status      string `json:"status"`
+}
+
+func (store *Store) ResponseInvitation(ctx context.Context, arg ResponseInvitationTxParams) error {
+	return store.execTX(ctx, func(q *Queries) error {
+		err := q.CandidateResponse(ctx, CandidateResponseParams{
+			arg.TeamID,
+			arg.CandidateID,
+			sql.NullString{String: arg.Status, Valid: true},
+		})
+		if err != nil {
+			return err
+		}
+		return nil
+	})
 }

@@ -22,7 +22,7 @@ func (q *Queries) DeleteCandidate(ctx context.Context, canID int64) error {
 }
 
 const getCandidate = `-- name: GetCandidate :one
-SELECT can_id, fullname, title, email, country, ranklocal, rankworld, company, dateofbirth, coach_id, password FROM candidate
+SELECT can_id, fullname, title, email, country, ranklocal, rankworld, company, dateofbirth, coach_id, password, is_in_team FROM candidate
 WHERE can_id = $1 LIMIT 1
 `
 
@@ -41,12 +41,13 @@ func (q *Queries) GetCandidate(ctx context.Context, canID int64) (Candidate, err
 		&i.Dateofbirth,
 		&i.CoachID,
 		&i.Password,
+		&i.IsInTeam,
 	)
 	return i, err
 }
 
 const getCandidateByEmail = `-- name: GetCandidateByEmail :one
-SELECT can_id, fullname, title, email, country, ranklocal, rankworld, company, dateofbirth, coach_id, password FROM candidate
+SELECT can_id, fullname, title, email, country, ranklocal, rankworld, company, dateofbirth, coach_id, password, is_in_team FROM candidate
 WHERE email = $1 LIMIT 1
 `
 
@@ -65,12 +66,24 @@ func (q *Queries) GetCandidateByEmail(ctx context.Context, email sql.NullString)
 		&i.Dateofbirth,
 		&i.CoachID,
 		&i.Password,
+		&i.IsInTeam,
 	)
 	return i, err
 }
 
+const getInTeam = `-- name: GetInTeam :one
+SELECT is_in_team FROM candidate WHERE can_id = $1
+`
+
+func (q *Queries) GetInTeam(ctx context.Context, canID int64) (sql.NullBool, error) {
+	row := q.db.QueryRowContext(ctx, getInTeam, canID)
+	var is_in_team sql.NullBool
+	err := row.Scan(&is_in_team)
+	return is_in_team, err
+}
+
 const listCandidates = `-- name: ListCandidates :many
-SELECT can_id, fullname, title, email, country, ranklocal, rankworld, company, dateofbirth, coach_id, password FROM candidate
+SELECT can_id, fullname, title, email, country, ranklocal, rankworld, company, dateofbirth, coach_id, password, is_in_team FROM candidate
 ORDER BY ranklocal
 LIMIT $1
 `
@@ -96,6 +109,7 @@ func (q *Queries) ListCandidates(ctx context.Context, limit int32) ([]Candidate,
 			&i.Dateofbirth,
 			&i.CoachID,
 			&i.Password,
+			&i.IsInTeam,
 		); err != nil {
 			return nil, err
 		}
@@ -112,7 +126,7 @@ func (q *Queries) ListCandidates(ctx context.Context, limit int32) ([]Candidate,
 
 const registerCandidate = `-- name: RegisterCandidate :one
 INSERT INTO candidate
-(email, password) VALUES ($1, $2) RETURNING can_id, fullname, title, email, country, ranklocal, rankworld, company, dateofbirth, coach_id, password
+(email, password) VALUES ($1, $2) RETURNING can_id, fullname, title, email, country, ranklocal, rankworld, company, dateofbirth, coach_id, password, is_in_team
 `
 
 type RegisterCandidateParams struct {
@@ -135,8 +149,25 @@ func (q *Queries) RegisterCandidate(ctx context.Context, arg RegisterCandidatePa
 		&i.Dateofbirth,
 		&i.CoachID,
 		&i.Password,
+		&i.IsInTeam,
 	)
 	return i, err
+}
+
+const setInTeam = `-- name: SetInTeam :exec
+UPDATE candidate
+SET is_in_team = $1
+WHERE can_id = $2
+`
+
+type SetInTeamParams struct {
+	IsInTeam sql.NullBool `json:"is_in_team"`
+	CanID    int64        `json:"can_id"`
+}
+
+func (q *Queries) SetInTeam(ctx context.Context, arg SetInTeamParams) error {
+	_, err := q.db.ExecContext(ctx, setInTeam, arg.IsInTeam, arg.CanID)
+	return err
 }
 
 const signCoach = `-- name: SignCoach :exec

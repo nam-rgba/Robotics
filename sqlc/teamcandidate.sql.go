@@ -7,38 +7,22 @@ package sqlc
 
 import (
 	"context"
+	"database/sql"
 )
 
-const acceptCandidate = `-- name: AcceptCandidate :one
-UPDATE team_candidate SET invitation_status = 'accepted' WHERE team_id = $1 AND can_id = $2 RETURNING team_id, can_id, invitation_status
+const candidateResponse = `-- name: CandidateResponse :exec
+UPDATE team_candidate SET invitation_status = $3 WHERE team_id = $1 AND can_id = $2 RETURNING team_id, can_id, invitation_status
 `
 
-type AcceptCandidateParams struct {
-	TeamID int64 `json:"team_id"`
-	CanID  int64 `json:"can_id"`
+type CandidateResponseParams struct {
+	TeamID           int64          `json:"team_id"`
+	CanID            int64          `json:"can_id"`
+	InvitationStatus sql.NullString `json:"invitation_status"`
 }
 
-func (q *Queries) AcceptCandidate(ctx context.Context, arg AcceptCandidateParams) (TeamCandidate, error) {
-	row := q.db.QueryRowContext(ctx, acceptCandidate, arg.TeamID, arg.CanID)
-	var i TeamCandidate
-	err := row.Scan(&i.TeamID, &i.CanID, &i.InvitationStatus)
-	return i, err
-}
-
-const candidateRequest = `-- name: CandidateRequest :one
-INSERT INTO team_candidate (team_id, can_id, invitation_status) VALUES ($1, $2, 'pending') RETURNING team_id, can_id, invitation_status
-`
-
-type CandidateRequestParams struct {
-	TeamID int64 `json:"team_id"`
-	CanID  int64 `json:"can_id"`
-}
-
-func (q *Queries) CandidateRequest(ctx context.Context, arg CandidateRequestParams) (TeamCandidate, error) {
-	row := q.db.QueryRowContext(ctx, candidateRequest, arg.TeamID, arg.CanID)
-	var i TeamCandidate
-	err := row.Scan(&i.TeamID, &i.CanID, &i.InvitationStatus)
-	return i, err
+func (q *Queries) CandidateResponse(ctx context.Context, arg CandidateResponseParams) error {
+	_, err := q.db.ExecContext(ctx, candidateResponse, arg.TeamID, arg.CanID, arg.InvitationStatus)
+	return err
 }
 
 const getCandidates = `-- name: GetCandidates :many
@@ -95,17 +79,17 @@ func (q *Queries) GetTeamCandidates(ctx context.Context, teamID int64) ([]TeamCa
 	return items, nil
 }
 
-const rejectCandidate = `-- name: RejectCandidate :one
-UPDATE team_candidate SET invitation_status = 'rejected' WHERE team_id = $1 AND can_id = $2 RETURNING team_id, can_id, invitation_status
+const inviteByEmail = `-- name: InviteByEmail :one
+INSERT INTO team_candidate (team_id, can_id, invitation_status) VALUES ($1, $2, 'pending') RETURNING team_id, can_id, invitation_status
 `
 
-type RejectCandidateParams struct {
+type InviteByEmailParams struct {
 	TeamID int64 `json:"team_id"`
 	CanID  int64 `json:"can_id"`
 }
 
-func (q *Queries) RejectCandidate(ctx context.Context, arg RejectCandidateParams) (TeamCandidate, error) {
-	row := q.db.QueryRowContext(ctx, rejectCandidate, arg.TeamID, arg.CanID)
+func (q *Queries) InviteByEmail(ctx context.Context, arg InviteByEmailParams) (TeamCandidate, error) {
+	row := q.db.QueryRowContext(ctx, inviteByEmail, arg.TeamID, arg.CanID)
 	var i TeamCandidate
 	err := row.Scan(&i.TeamID, &i.CanID, &i.InvitationStatus)
 	return i, err

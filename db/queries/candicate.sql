@@ -31,3 +31,11 @@ WHERE email = $1 LIMIT 1;
 -- name: DeleteCandidate :exec
 DELETE FROM candidate
 WHERE can_id = $1;
+
+-- name: SetInTeam :exec
+UPDATE candidate
+SET is_in_team = $1
+WHERE can_id = $2;
+
+-- name: GetInTeam :one
+SELECT is_in_team FROM candidate WHERE can_id = $1;

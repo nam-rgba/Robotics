@@ -21,6 +21,7 @@ type Candidate struct {
 	Dateofbirth time.Time      `json:"dateofbirth"`
 	CoachID     sql.NullInt64  `json:"coach_id"`
 	Password    string         `json:"password"`
+	IsInTeam    sql.NullBool   `json:"is_in_team"`
 }
 
 type Challenge struct {

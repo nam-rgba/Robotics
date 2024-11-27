@@ -11,17 +11,16 @@ import (
 )
 
 const createTeam = `-- name: CreateTeam :one
-INSERT INTO team (teamname, coach_id, join_code ) VALUES ($1, $2, $3) RETURNING team_id, coach_id, join_code, teamname, competiton_id, maxteam
+INSERT INTO team (teamname, coach_id ) VALUES ($1, $2) RETURNING team_id, coach_id, join_code, teamname, competiton_id, maxteam
 `
 
 type CreateTeamParams struct {
 	Teamname sql.NullString `json:"teamname"`
 	CoachID  sql.NullInt64  `json:"coach_id"`
-	JoinCode sql.NullString `json:"join_code"`
 }
 
 func (q *Queries) CreateTeam(ctx context.Context, arg CreateTeamParams) (Team, error) {
-	row := q.db.QueryRowContext(ctx, createTeam, arg.Teamname, arg.CoachID, arg.JoinCode)
+	row := q.db.QueryRowContext(ctx, createTeam, arg.Teamname, arg.CoachID)
 	var i Team
 	err := row.Scan(
 		&i.TeamID,
@@ -32,6 +31,28 @@ func (q *Queries) CreateTeam(ctx context.Context, arg CreateTeamParams) (Team, e
 		&i.Maxteam,
 	)
 	return i, err
+}
+
+const getMaxTeamId = `-- name: GetMaxTeamId :one
+SELECT maxteam FROM team WHERE team_id = $1
+`
+
+func (q *Queries) GetMaxTeamId(ctx context.Context, teamID int64) (sql.NullInt32, error) {
+	row := q.db.QueryRowContext(ctx, getMaxTeamId, teamID)
+	var maxteam sql.NullInt32
+	err := row.Scan(&maxteam)
+	return maxteam, err
+}
+
+const getNumberOfCandidates = `-- name: GetNumberOfCandidates :one
+SELECT count(can_id) FROM team_candidate WHERE team_id = $1
+`
+
+func (q *Queries) GetNumberOfCandidates(ctx context.Context, teamID int64) (int64, error) {
+	row := q.db.QueryRowContext(ctx, getNumberOfCandidates, teamID)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
 }
 
 const getTeam = `-- name: GetTeam :many
@@ -69,13 +90,13 @@ func (q *Queries) GetTeam(ctx context.Context, coachID sql.NullInt64) ([]Team, e
 	return items, nil
 }
 
-const getTeamByCode = `-- name: GetTeamByCode :one
+const getTeamById = `-- name: GetTeamById :one
 SELECT team_id, coach_id, join_code, teamname, competiton_id, maxteam FROM team
-WHERE join_code = $1
+WHERE team_id = $1
 `
 
-func (q *Queries) GetTeamByCode(ctx context.Context, joinCode sql.NullString) (Team, error) {
-	row := q.db.QueryRowContext(ctx, getTeamByCode, joinCode)
+func (q *Queries) GetTeamById(ctx context.Context, teamID int64) (Team, error) {
+	row := q.db.QueryRowContext(ctx, getTeamById, teamID)
 	var i Team
 	err := row.Scan(
 		&i.TeamID,

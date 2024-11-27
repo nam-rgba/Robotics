@@ -20,7 +20,8 @@ CREATE TABLE "candidate" (
   "company" VARCHAR,
   "dateofbirth" TIMESTAMPTZ NOT NULL DEFAULT (now()),
   "coach_id" bigserial REFERENCES coach(coach_id) ON DELETE CASCADE,
-   "password" VARCHAR(255) NOT NULL
+   "password" VARCHAR(255) NOT NULL,
+   "is_in_team" BOOLEAN DEFAULT FALSE
 );
 
 CREATE TABLE "organization" (
