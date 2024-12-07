@@ -2,7 +2,7 @@ ALTER TABLE candidate
 DROP CONSTRAINT candidate_coach_id_fkey;
 
 ALTER TABLE candidate
-ALTER COLUMN coach_id SET DATA TYPE bigserial;
+ALTER COLUMN coach_id SET DATA TYPE bigint;
 
 ALTER TABLE candidate
 ADD CONSTRAINT candidate_coach_id_fkey 
